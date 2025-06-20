@@ -14,7 +14,7 @@ Quick-Windows is a user-friendly, visually appealing **application installer** d
 ## 🚀 How It Works
 1. **Select Apps**: Choose from a curated list of popular tools like **Discord**, **Steam**, **Spotify**, and more. 🎮
 2. **Install with One Click**: Watch as Quick-Windows handles downloads and installations seamlessly. ✅
-3. **Enjoy Your Tools**: Get back to being productive or having fun—no headaches required. 🛠️
+3. **Enjoy Your Tools**: Get back to being productive or having fun no headaches required. 🛠️
 
 ## 👨‍💻 Tech Stack
 - **Language**: Python 🐍

@@ -22,12 +22,6 @@ Quick-Windows is a user-friendly, visually appealing **application installer** d
 - **Framework**: Tkinter for GUI development 🎨
 - **Other Libraries**: `requests`, `threading`, and `os` for enhanced functionality. 🛠️
 
-## 📦 Prerequisites
-To run this project, ensure you have:
-- Python 3.7+ installed on your system.
-- Required libraries: Install them using:
-  ```bash
-  pip install -r requirements.txt
 
 ![Screenshot 2025-06-20 213336](https://github.com/user-attachments/assets/3b6755f0-52aa-4aa7-8075-3b39aafb591b)
 

@@ -1,4 +1,3 @@
-![Screenshot 2025-06-20 213336](https://github.com/user-attachments/assets/3b6755f0-52aa-4aa7-8075-3b39aafb591b)
 # ✨ Quick-Windows: Your One-Stop App Installer 🖥️
 
 Welcome to **Quick-Windows**, the ultimate solution for quickly and efficiently downloading and installing your favorite Windows apps! 🚀 
@@ -30,7 +29,7 @@ To run this project, ensure you have:
   ```bash
   pip install -r requirements.txt
 
-  ![Screenshot 2025-06-20 213336](https://github.com/user-attachments/assets/652ea688-b676-4fd9-be7a-87732d941cd7)
+![Screenshot 2025-06-20 213336](https://github.com/user-attachments/assets/3b6755f0-52aa-4aa7-8075-3b39aafb591b)
 
 
 

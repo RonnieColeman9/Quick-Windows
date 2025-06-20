@@ -1,0 +1,222 @@
+import tkinter as tk
+from tkinter import ttk, font, messagebox
+import requests
+import threading
+import os
+from collections import deque
+import time
+import webbrowser # Import the webbrowser module
+
+class AppInstaller(tk.Tk):
+
+    def __init__(self, apps_data, apps_per_row=4, discord_link=None):
+        super().__init__()
+
+        self.apps_data = apps_data
+        self.apps_per_row = apps_per_row
+        self.installation_queue = deque()
+        self.worker_lock = threading.Lock()
+        self.is_worker_running = False
+        self.discord_link = discord_link # Store the Discord link
+
+        self._configure_window()
+        self._configure_styles()
+        self._create_widgets()
+
+        # Bind the on_close method to the window's close protocol
+        self.protocol("WM_DELETE_WINDOW", self.on_close)
+
+    def _configure_window(self):
+        self.title("V1.0 Quick-Windows")
+        self.geometry("1109x793")
+        self.configure(bg="#1e1e1e")
+        self.minsize(900, 550)
+
+    def _configure_styles(self):
+        style = ttk.Style(self)
+        style.theme_use('clam')
+
+        font_bold = ("JetBrains Mono", 10, "bold")
+        style.configure("TButton", background="#0078D7", foreground="white", borderwidth=0, padding=(20, 12), font=font_bold)
+        style.map("TButton", background=[('active', "#005A9E"), ('disabled', '#444444')])
+        style.configure("Success.TButton", background="#107C10", foreground="white")
+        style.configure("Error.TButton", background="#D83B01", foreground="white")
+        style.configure("Queued.TButton", background="#555555", foreground="white")
+
+        style.layout('Global.TProgressbar', [('Global.TProgressbar.trough', {'children': [('Global.TProgressbar.pbar', {'side': 'left', 'sticky': 'ns'})], 'sticky': 'nswe'})])
+        style.configure("Global.TProgressbar", background="#0078D7", troughcolor="#2a2a2a", borderwidth=0, thickness=5)
+
+    def _create_widgets(self):
+        header_frame = tk.Frame(self, bg=self['bg'])
+        header_frame.pack(pady=(30, 25), fill='x')
+        tk.Label(header_frame, text="Quick Windows", font=("JetBrains Mono", 24, "bold"), fg="white", bg=self['bg']).pack()
+        tk.Label(header_frame, text="Download your apps below", font=("JetBrains Mono", 12), fg="#cccccc", bg=self['bg']).pack()
+
+        footer_frame = tk.Frame(self, bg="#1e1e1e")
+        footer_frame.pack(side='bottom', fill='x')
+
+        self.global_progress_bar = ttk.Progressbar(footer_frame, style="Global.TProgressbar")
+
+        self.status_label = tk.Label(footer_frame, text="Ready", font=("JetBrains Mono", 10), fg="#cccccc", bg=footer_frame['bg'], anchor='w')
+        self.status_label.pack(fill='x', padx=20, pady=10)
+
+        main_frame = tk.Frame(self, bg=self['bg'])
+        main_frame.pack(fill='both', expand=True, padx=50, pady=(0, 20))
+
+        for i in range(self.apps_per_row):
+            main_frame.grid_columnconfigure(i, weight=1)
+
+        for i, app in enumerate(self.apps_data):
+            row = i // self.apps_per_row
+            col = i % self.apps_per_row
+            main_frame.grid_rowconfigure(row, weight=1)
+            self._create_app_card(app, main_frame, row, col)
+
+        self._center_window()
+
+    def _create_app_card(self, app_data, parent_frame, row, col):
+        card_frame = tk.Frame(parent_frame, bg=self['bg'])
+        card_frame.grid(row=row, column=col, padx=15, pady=15, sticky="nsew")
+
+        card_frame.grid_columnconfigure(0, weight=1)
+
+        name_font = font.Font(family="JetBrains Mono", size=14, weight="bold")
+        name_label = tk.Label(card_frame, text=app_data["name"], font=name_font, fg="white", bg=card_frame['bg'])
+        name_label.pack(pady=(10, 15))
+
+        button = ttk.Button(card_frame, text="Install")
+        button.pack(pady=(10, 15))
+
+        task = {'name': app_data['name'], 'url': app_data['url'], 'button': button}
+        button.config(command=lambda t=task: self._queue_installation(t))
+
+    def _queue_installation(self, task):
+        task['button'].config(text="Queued", style="Queued.TButton", state='disabled')
+
+        if not self.installation_queue:
+            self.global_progress_bar.pack(side='top', fill='x', padx=3, pady=(3,0))
+
+        self.installation_queue.append(task)
+        
+        with self.worker_lock:
+            if not self.is_worker_running:
+                self.is_worker_running = True
+                threading.Thread(target=self._process_queue, daemon=True).start()
+
+    def _process_queue(self):
+        while self.installation_queue:
+            task = self.installation_queue.popleft()
+            self._install_application(task)
+        
+        self.after(0, self.status_label.config, {'text': 'All installations complete.'})
+        self.after(0, self.global_progress_bar.pack_forget)
+        with self.worker_lock:
+            self.is_worker_running = False
+
+    def _install_application(self, task):
+        name, url, button = task['name'], task['url'], task['button']
+
+        def schedule_ui_update(func, *args, **kwargs):
+            self.after(0, lambda: func(*args, **kwargs))
+
+        def update_progress(progress):
+            schedule_ui_update(self.global_progress_bar.config, value=progress)
+
+        temp_path = os.path.join(os.getenv('TEMP'), f'{name}_installer_{os.getpid()}.exe')
+
+        try:
+            schedule_ui_update(self.status_label.config, text=f"Downloading: {name}...")
+            schedule_ui_update(button.config, text="Downloading...")
+            schedule_ui_update(self.global_progress_bar.config, mode='determinate', value=0)
+            
+            success, error = self._download_file(url, temp_path, update_progress)
+
+            if success:
+                schedule_ui_update(self.status_label.config, text=f"Installing: {name}...")
+                schedule_ui_update(button.config, text="Installing...")
+                schedule_ui_update(self.global_progress_bar.config, mode='indeterminate')
+                schedule_ui_update(self.global_progress_bar.start, 10)
+                
+                os.system(f'start /wait "" "{temp_path}" /S')
+                time.sleep(2)
+
+                schedule_ui_update(button.config, text="✓ Installed", style="Success.TButton")
+                schedule_ui_update(self.status_label.config, text=f"Successfully installed {name}.")
+            else:
+                schedule_ui_update(button.config, text="❌ Failed", style="Error.TButton", state='normal')
+                schedule_ui_update(self.status_label.config, text=f"Download failed for {name}: {error}")
+
+        except Exception as e:
+            schedule_ui_update(button.config, text="❌ Failed", style="Error.TButton", state='normal')
+            schedule_ui_update(self.status_label.config, text=f"Error installing {name}: {e}")
+        
+        finally:
+            schedule_ui_update(self.global_progress_bar.stop)
+            if os.path.exists(temp_path):
+                try:
+                    os.remove(temp_path)
+                except OSError as e:
+                    print(f"Error removing temp file {temp_path}: {e}")
+
+    def _download_file(self, url, file_path, progress_callback):
+        try:
+            with requests.get(url, stream=True, allow_redirects=True, timeout=30) as r:
+                r.raise_for_status()
+                total_size = int(r.headers.get('content-length', 0))
+                downloaded = 0
+                with open(file_path, 'wb') as f:
+                    for chunk in r.iter_content(chunk_size=8192):
+                        f.write(chunk)
+                        downloaded += len(chunk)
+                        if progress_callback and total_size > 0:
+                            progress = (downloaded / total_size) * 100
+                            progress_callback(progress)
+            return True, None
+        except requests.RequestException as e:
+            return False, f"Network error: {e}"
+        except Exception as e:
+            return False, str(e)
+
+    def _center_window(self):
+        self.update_idletasks()
+        width = self.winfo_width()
+        height = self.winfo_height()
+        x = (self.winfo_screenwidth() // 2) - (width // 2)
+        y = (self.winfo_screenheight() // 2) - (height // 2)
+        self.geometry(f'{width}x{height}+{x}+{y}')
+
+    def on_close(self):
+        """Method to call when the window is closed."""
+        if self.discord_link:
+            webbrowser.open(self.discord_link)
+        self.destroy() # Close the Tkinter window
+
+def main():
+    apps_to_install = [
+        {"name": "Discord", "url": "https://discord.com/api/downloads/distributions/app/installers/latest?channel=stable&platform=win&arch=x64"},
+        {"name": "VS Code", "url": "https://code.visualstudio.com/sha/download?build=stable&os=win32-x64-user"},
+        {"name": "7-Zip", "url": "https://www.7-zip.org/a/7z2409-x64.exe"},
+        {"name": "Zen Browser", "url": "https://github.com/zen-browser/desktop/releases/latest/download/zen.installer.exe"},
+        {"name": "VLC Player", "url": "https://get.videolan.org/vlc/3.0.21/win64/vlc-3.0.21-win64.exe"},
+        {"name": "Spotify", "url": "https://download.scdn.co/SpotifySetup.exe"},
+        {"name": "OBS Studio", "url": "https://github.com/obsproject/obs-studio/releases/download/30.1.2/OBS-Studio-30.1.2-Full-Installer-x64.exe"},
+        {"name": "BC uninstaller", "url": "https://github.com/Klocman/Bulk-Crap-Uninstaller/releases/download/v5.8.3/BCUninstaller_5.8.3_setup.exe"},
+        {"name": "Valorant", "url": "https://valorant.secure.dyn.riotcdn.net/channels/public/x/installer/current/live.live.eu.exe"},
+        {"name": "Epic Games", "url": "https://launcher-public-service-prod06.ol.epicgames.com/launcher/api/installer/download/EpicGamesLauncherInstaller.msi"},
+        {"name": "Steam", "url": "https://cdn.fastly.steamstatic.com/client/installer/SteamSetup.exe"},
+        {"name": "Floorp Browser", "url": "https://github.com/Floorp-Projects/Floorp/releases/download/v11.27.0/floorp-win64.installer.exe"},
+    ]
+
+    discord_invite_link = "https://discord.gg/DWKafNrj5m"
+
+    try:
+        app = AppInstaller(apps_to_install, apps_per_row=4, discord_link=discord_invite_link)
+        app.mainloop()
+    except Exception as e:
+        root = tk.Tk()
+        root.withdraw()
+        messagebox.showerror("Fatal Error", f"A critical error occurred:\n\n{type(e).__name__}: {e}")
+        root.destroy()
+
+if __name__ == "__main__":
+    main()

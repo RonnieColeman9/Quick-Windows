@@ -29,6 +29,10 @@ To run this project, ensure you have:
   ```bash
   pip install -r requirements.txt
 
+  ![Screenshot 2025-06-20 213336](https://github.com/user-attachments/assets/652ea688-b676-4fd9-be7a-87732d941cd7)
+
+
+
 # Ignore, its just tags
 Python Tkinter GUI Application Installer Windows Tools Batch Installer PC Setup Productivity Automation Dark Mode Open Source App Management Software Installer Quick Installer Windows Applications Python Project Beginner Friendly
 

@@ -1,4 +1,4 @@
-*✨ Quick-Windows: Your One-Stop App Installer 🖥️*
+#**✨ Quick-Windows: Your One-Stop App Installer 🖥️**
 
 Welcome to Quick-Windows, the ultimate solution for quickly and efficiently downloading and installing your favorite Windows apps! 🚀
 📜 About the Project

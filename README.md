@@ -9,7 +9,6 @@ Quick-Windows is a user-friendly, visually appealing **application installer** d
 - **Batch Installation**: Queue multiple apps and let Quick-Windows do the rest. ⏳
 - **Real-time Status Updates**: Stay informed with **download and installation progress**. 📊
 - **Minimal Design**: A clean interface with dark mode aesthetics for modern users. 🖤
-- **Community Support**: Join our [Discord Community](https://discord.gg/DWKafNrj5m) for feedback, updates, and more! 💬
 - **We also have a [Website](https://ronniecoleman9.github.io/) now!**
 
 ## 🚀 How It Works
